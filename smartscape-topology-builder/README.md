@@ -12,8 +12,34 @@ A Dynatrace App that provides a GUI for creating custom topology rules in Smarts
 ### Prerequisites
 
 - Node.js 18+
-- Access to a Dynatrace SaaS environment
+- Access to a Dynatrace SaaS environment (Grail-enabled)
 - `dt-app` CLI (bundled via `npx`)
+
+### Authentication & Authorization
+
+This app uses **OAuth 2.0** (Dynatrace Platform identity) — not classic API tokens. When you deploy, the app registers its required scopes with the platform. An environment admin must then **approve the app's permissions** in IAM (Settings → OAuth clients) before it can function.
+
+**Required OAuth scopes** (all declared in `app.config.json`):
+
+| Scope | Purpose |
+|-------|---------|
+| `storage:entities:read` | DQL entity queries |
+| `environment-api:entities:read` | Entity API v2 for relationships |
+| `environment-api:entities:write` | Push bridge entities |
+| `storage:buckets:read` | DQL query support |
+| `storage:events:read` | DQL entity queries |
+| `storage:metrics:write` | Metric ingest for topology extraction |
+| `environment-api:metrics:write` | SDK `metricsClient.ingest()` |
+| `settings:objects:read` / `write` | Read/write topology settings |
+| `settings:schemas:read` | Read settings schema definitions |
+| `environment-api:events:write` | Ingest events for topology extraction |
+| `environment-api:api-tokens:write` | Auto-provision fallback API token |
+| `state:app-states:read` / `write` | Cache token + audit trail |
+| `openTelemetryTrace.ingest` | OTLP trace ingest for direct edges |
+
+**No platform token or `dtctl` access is required.** The app runs entirely within the Dynatrace AppEngine runtime and authenticates via the platform's built-in OAuth flow. Users access it through SSO — no separate credentials needed.
+
+> **Note**: If your environment uses the Dynatrace MCP Client or `dtctl`, those are not required for this app. This is a standalone Dynatrace App that only needs IAM scope approval.
 
 ### 1. Clone and Install
 
