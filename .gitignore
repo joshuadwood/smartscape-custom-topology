@@ -24,3 +24,9 @@ Thumbs.db
 test-payload*.json
 test-rel.json
 test-type.json
+
+# Session/agent files
+CLAUDE.md
+MEMORY.md
+openpipeline-config.yaml
+*.code-workspace
