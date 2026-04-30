@@ -249,16 +249,4 @@ The app requires 15 scopes in `app.config.json`:
 
 ## License
 
-ISC
-
-**Duplicate entity created?**
-- The OTLP trace may create a new entity if `dt.entity.service` doesn't match the existing service detection pattern. This affects OneAgent-instrumented services that aren't OTel-based. The edge still renders correctly in Smartscape.
-
-**Metrics ingest 403?**
-- The SDK's `metricsClient.ingest()` requires `environment-api:metrics:write` scope. If the scope isn't approved in IAM, the fallback chain tries auto-provisioned API tokens via the external SaaS endpoint.
-
----
-
-## License
-
 Internal Dynatrace tooling. Not for distribution.
