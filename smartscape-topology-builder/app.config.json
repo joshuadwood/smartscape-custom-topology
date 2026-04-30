@@ -1,0 +1,27 @@
+{
+  "$schema": "./.dt-app/app.config.schema.json",
+  "environmentUrl": "https://qof78400.apps.dynatrace.com/",
+  "app": {
+    "name": "Smartscape Topology Builder",
+    "version": "1.10.3",
+    "description": "GUI for creating custom Smartscape topology rules via Settings API",
+    "id": "my.smartscape.topology.builder",
+    "scopes": [
+      { "name": "storage:entities:read", "comment": "DQL fetch dt.entity.* queries" },
+      { "name": "environment-api:entities:read", "comment": "Entity API v2 for relationships" },
+      { "name": "environment-api:entities:write", "comment": "Push custom device bridge entities" },
+      { "name": "storage:buckets:read", "comment": "DQL query support" },
+      { "name": "storage:events:read", "comment": "DQL entity queries" },
+      { "name": "storage:metrics:write", "comment": "Metric ingest for topology extraction" },
+      { "name": "environment-api:metrics:write", "comment": "SDK metricsClient.ingest() for topology extraction" },
+      { "name": "settings:objects:read", "comment": "Read settings objects" },
+      { "name": "settings:objects:write", "comment": "Write topology settings" },
+      { "name": "settings:schemas:read", "comment": "Read settings schema definitions" },
+      { "name": "environment-api:events:write", "comment": "Ingest events for topology extraction" },
+      { "name": "environment-api:api-tokens:write", "comment": "Create API token for metrics.ingest" },
+      { "name": "state:app-states:read", "comment": "Read cached metrics ingest token and audit trail" },
+      { "name": "state:app-states:write", "comment": "Cache metrics ingest token and audit trail" },
+      { "name": "openTelemetryTrace.ingest", "comment": "OTLP trace ingest for direct service-to-service topology" }
+    ]
+  }
+}

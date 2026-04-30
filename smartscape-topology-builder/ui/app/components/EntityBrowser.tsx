@@ -1,0 +1,128 @@
+import React, { useState } from 'react';
+import { Flex } from '@dynatrace/strato-components/layouts';
+import { Heading, Text } from '@dynatrace/strato-components/typography';
+import { TextInput } from '@dynatrace/strato-components-preview/forms';
+import { ProgressCircle } from '@dynatrace/strato-components/content';
+import { Surface } from '@dynatrace/strato-components/layouts';
+import { Container } from '@dynatrace/strato-components/layouts';
+import Colors from '@dynatrace/strato-design-tokens/colors';
+import { useEntities } from '../hooks/useEntities';
+import type { DynatraceEntity } from '../types';
+import { ENTITY_TYPES } from '../types';
+
+interface EntityBrowserProps {
+  onAddEntity: (entity: DynatraceEntity) => void;
+  addedEntityIds: Set<string>;
+}
+
+export const EntityBrowser: React.FC<EntityBrowserProps> = ({ onAddEntity, addedEntityIds }) => {
+  const [selectedType, setSelectedType] = useState<string>(ENTITY_TYPES[0].id);
+  const [search, setSearch] = useState('');
+  const { entities, isLoading, error } = useEntities(selectedType, search);
+
+  return (
+    <Flex flexDirection="column" style={{ width: 260, borderRight: `1px solid ${Colors.Border.Neutral.Default}`, height: '100%', overflow: 'hidden' }}>
+      <Container paddingBottom={0}>
+        <Heading level={5}>Entity Browser</Heading>
+        <TextInput
+          placeholder="Search entities..."
+          value={search}
+          onChange={setSearch}
+          style={{ marginTop: 8 }}
+        />
+      </Container>
+
+      <div style={{
+        display: 'flex', flexWrap: 'wrap', gap: 4, padding: '6px 8px',
+        borderBottom: `1px solid ${Colors.Border.Neutral.Default}`, flexShrink: 0,
+      }}>
+        {ENTITY_TYPES.map((et) => {
+          const active = selectedType === et.id;
+          return (
+            <button
+              key={et.id}
+              onClick={() => { setSelectedType(et.id); setSearch(''); }}
+              style={{
+                padding: '4px 10px', borderRadius: 4, fontSize: 12, cursor: 'pointer',
+                border: `1px solid ${active ? Colors.Border.Neutral.Accent : Colors.Border.Neutral.Default}`,
+                background: active ? Colors.Background.Container.Neutral.Accent : 'transparent',
+                color: active ? Colors.Text.Neutral.OnAccent.Default : Colors.Text.Neutral.Default,
+                fontWeight: active ? 600 : 400,
+              }}
+            >
+              {et.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+        {isLoading && (
+          <Flex justifyContent="center" padding={16}>
+            <ProgressCircle size="small" />
+          </Flex>
+        )}
+        {error && (
+          <Container>
+            <Text color="critical">Failed to load entities: {error.message}</Text>
+          </Container>
+        )}
+        {!isLoading && !error && entities.length === 0 && (
+          <Container>
+            <Text color="secondary">No entities found.</Text>
+          </Container>
+        )}
+        {entities.map((entity) => {
+          const isAdded = addedEntityIds.has(entity.entityId);
+          return (
+            <EntityListItem
+              key={entity.entityId}
+              entity={entity}
+              isAdded={isAdded}
+              onAdd={() => onAddEntity(entity)}
+            />
+          );
+        })}
+      </div>
+    </Flex>
+  );
+};
+
+interface EntityListItemProps {
+  entity: DynatraceEntity;
+  isAdded: boolean;
+  onAdd: () => void;
+}
+
+const EntityListItem: React.FC<EntityListItemProps> = ({ entity, isAdded, onAdd }) => {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <Surface
+      style={{
+        margin: '2px 8px',
+        padding: '8px 12px',
+        cursor: isAdded ? 'default' : 'pointer',
+        opacity: isAdded ? 0.6 : 1,
+        backgroundColor: hovered && !isAdded ? Colors.Background.Surface.Backdrop : 'transparent',
+        borderRadius: 4,
+        transition: 'background-color 0.15s',
+      }}
+      onClick={() => !isAdded && onAdd()}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <Text
+        style={{ fontWeight: 500, fontSize: 13, display: 'block', whiteSpace: 'nowrap',
+          overflow: 'hidden', textOverflow: 'ellipsis',
+          textDecoration: isAdded ? 'line-through' : 'none' }}
+      >
+        {entity.displayName}
+      </Text>
+      <Text color="secondary" style={{ fontSize: 12 }}>
+        {entity.type}
+        {isAdded && ' · Added'}
+      </Text>
+    </Surface>
+  );
+};
