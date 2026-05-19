@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Flex } from '@dynatrace/strato-components/layouts';
 import { Heading, Text } from '@dynatrace/strato-components/typography';
 import { TextInput } from '@dynatrace/strato-components-preview/forms';
@@ -7,6 +7,7 @@ import { Surface } from '@dynatrace/strato-components/layouts';
 import { Container } from '@dynatrace/strato-components/layouts';
 import Colors from '@dynatrace/strato-design-tokens/colors';
 import { useEntities } from '../hooks/useEntities';
+import { useCustomEntityTypes } from '../hooks/useCustomEntityTypes';
 import type { DynatraceEntity } from '../types';
 import { ENTITY_TYPES } from '../types';
 
@@ -19,6 +20,13 @@ export const EntityBrowser: React.FC<EntityBrowserProps> = ({ onAddEntity, added
   const [selectedType, setSelectedType] = useState<string>(ENTITY_TYPES[0].id);
   const [search, setSearch] = useState('');
   const { entities, isLoading, error } = useEntities(selectedType, search);
+  const { customTypes, isLoading: customTypesLoading } = useCustomEntityTypes();
+
+  const allTypes = useMemo(() => {
+    const builtIn = ENTITY_TYPES.map((et) => ({ id: et.id, label: et.label }));
+    const custom = customTypes.map((ct) => ({ id: ct.id, label: ct.label }));
+    return [...builtIn, ...custom];
+  }, [customTypes]);
 
   return (
     <Flex flexDirection="column" style={{ width: 260, borderRight: `1px solid ${Colors.Border.Neutral.Default}`, height: '100%', overflow: 'hidden' }}>
@@ -35,8 +43,9 @@ export const EntityBrowser: React.FC<EntityBrowserProps> = ({ onAddEntity, added
       <div style={{
         display: 'flex', flexWrap: 'wrap', gap: 4, padding: '6px 8px',
         borderBottom: `1px solid ${Colors.Border.Neutral.Default}`, flexShrink: 0,
+        maxHeight: 120, overflowY: 'auto',
       }}>
-        {ENTITY_TYPES.map((et) => {
+        {allTypes.map((et) => {
           const active = selectedType === et.id;
           return (
             <button
@@ -54,6 +63,7 @@ export const EntityBrowser: React.FC<EntityBrowserProps> = ({ onAddEntity, added
             </button>
           );
         })}
+        {customTypesLoading && <ProgressCircle size="small" />}
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
