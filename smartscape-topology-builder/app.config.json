@@ -3,7 +3,7 @@
   "environmentUrl": "https://qof78400.apps.dynatrace.com/",
   "app": {
     "name": "Smartscape Topology Builder",
-    "version": "1.11.1",
+    "version": "1.11.2",
     "description": "GUI for creating custom Smartscape topology rules via Settings API",
     "id": "my.smartscape.topology.builder",
     "icon": "./ui/assets/app-icon.svg",
