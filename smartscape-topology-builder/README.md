@@ -2,7 +2,7 @@
 
 A Dynatrace App that provides a GUI for creating custom topology rules in Smartscape. Draw edges between any two entities — services, hosts, process groups, custom devices — and the app handles everything needed to make those edges appear in the Smartscape 2.0 service-overview.
 
-**Version**: 1.10.3  
+**Version**: 1.12.1  
 **Platform**: Dynatrace AppEngine (TypeScript/React + Strato Design System)
 
 ---
@@ -95,25 +95,25 @@ The app will be available at:
 
 The main canvas editor. Browse entities by type, place them on the SVG canvas, switch between Select and Connect modes, and draw edges between them.
 
-![Topology Builder](docs/screenshots/topology-builder.png)
+![Topology Builder](docs/screenshots/topology-builder.jpg)
 
 ### 🔗 Relationships
 
 Read-only view of existing Smartscape relationships. Filter by entity type and search by entity or relationship name. Shows directional connections with relationship badges.
 
-![Relationships](docs/screenshots/relationships.png)
+![Relationships](docs/screenshots/relationships.jpg)
 
 ### 📋 Created Rules
 
 Audit view of Settings objects and metrics created by the app. Shows metrics ingest status, extraction engine status, registered generic entity types, and relationship definitions.
 
-![Created Rules](docs/screenshots/created-rules.png)
+![Created Rules](docs/screenshots/created-rules.jpg)
 
 ### 📜 Audit Trail
 
 Execution history log. Every topology creation is recorded with timestamps, edge badges, relationship counts, and metric counts. Entries are expandable for full detail.
 
-![Audit Trail](docs/screenshots/audit-trail.png)
+![Audit Trail](docs/screenshots/audit-trail.jpg)
 
 ---
 
