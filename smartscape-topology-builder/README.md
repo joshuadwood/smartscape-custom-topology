@@ -21,21 +21,21 @@ This app uses **OAuth 2.0** (Dynatrace Platform identity) — not classic API to
 
 **Required OAuth scopes** (all declared in `app.config.json`):
 
-| Scope | Purpose |
-|-------|---------|
-| `storage:entities:read` | DQL entity queries |
-| `environment-api:entities:read` | Entity API v2 for relationships |
-| `environment-api:entities:write` | Push bridge entities |
-| `storage:buckets:read` | DQL query support |
-| `storage:events:read` | DQL entity queries |
-| `storage:metrics:write` | Metric ingest for topology extraction |
-| `environment-api:metrics:write` | SDK `metricsClient.ingest()` |
-| `settings:objects:read` / `write` | Read/write topology settings |
-| `settings:schemas:read` | Read settings schema definitions |
-| `environment-api:events:write` | Ingest events for topology extraction |
-| `environment-api:api-tokens:write` | Auto-provision fallback API token |
-| `state:app-states:read` / `write` | Cache token + audit trail |
-| `openTelemetryTrace.ingest` | OTLP trace ingest for direct edges |
+| Scope                              | Purpose                               |
+| ---------------------------------- | ------------------------------------- |
+| `storage:entities:read`            | DQL entity queries                    |
+| `environment-api:entities:read`    | Entity API v2 for relationships       |
+| `environment-api:entities:write`   | Push bridge entities                  |
+| `storage:buckets:read`             | DQL query support                     |
+| `storage:events:read`              | DQL entity queries                    |
+| `storage:metrics:write`            | Metric ingest for topology extraction |
+| `environment-api:metrics:write`    | SDK `metricsClient.ingest()`          |
+| `settings:objects:read` / `write`  | Read/write topology settings          |
+| `settings:schemas:read`            | Read settings schema definitions      |
+| `environment-api:events:write`     | Ingest events for topology extraction |
+| `environment-api:api-tokens:write` | Auto-provision fallback API token     |
+| `state:app-states:read` / `write`  | Cache token + audit trail             |
+| `openTelemetryTrace.ingest`        | OTLP trace ingest for direct edges    |
 
 **No platform token or `dtctl` access is required.** The app runs entirely within the Dynatrace AppEngine runtime and authenticates via the platform's built-in OAuth flow. Users access it through SSO — no separate credentials needed.
 
@@ -228,14 +228,14 @@ The hand-rolled protobuf encoder in `ingest-topology-trace.function.ts` implemen
 
 ## Key Dependencies
 
-| Package | Purpose |
-|---------|---------|
-| `@dynatrace-sdk/react-hooks` | `useDql` hook for entity discovery |
-| `@dynatrace-sdk/client-classic-environment-v2` | Entity API, metrics ingest, API token management |
-| `@dynatrace/strato-components` | Flex, Surface, Heading, Text, Button |
-| `@dynatrace/strato-components-preview` | Page, TitleBar, DataTable, Select, Modal, TextInput |
-| `@dynatrace/strato-design-tokens` | Colors, borders, box-shadows |
-| `react-router-dom` | Client-side routing |
+| Package                                        | Purpose                                             |
+| ---------------------------------------------- | --------------------------------------------------- |
+| `@dynatrace-sdk/react-hooks`                   | `useDql` hook for entity discovery                  |
+| `@dynatrace-sdk/client-classic-environment-v2` | Entity API, metrics ingest, API token management    |
+| `@dynatrace/strato-components`                 | Flex, Surface, Heading, Text, Button                |
+| `@dynatrace/strato-components-preview`         | Page, TitleBar, DataTable, Select, Modal, TextInput |
+| `@dynatrace/strato-design-tokens`              | Colors, borders, box-shadows                        |
+| `react-router-dom`                             | Client-side routing                                 |
 
 ---
 
@@ -243,23 +243,23 @@ The hand-rolled protobuf encoder in `ingest-topology-trace.function.ts` implemen
 
 The app requires 15 scopes in `app.config.json`:
 
-| Scope | Purpose |
-|-------|---------|
-| `storage:entities:read` | DQL entity queries |
-| `environment-api:entities:read` | Entity API for relationships |
-| `environment-api:entities:write` | Custom device bridge creation |
-| `storage:buckets:read` | DQL query support |
-| `storage:events:read` | DQL entity queries |
-| `storage:metrics:write` | Metric ingest |
-| `environment-api:metrics:write` | SDK metricsClient.ingest() |
-| `settings:objects:read` | Read Settings |
-| `settings:objects:write` | Write topology Settings |
-| `settings:schemas:read` | Read Settings schemas |
-| `environment-api:events:write` | Event ingest |
-| `environment-api:api-tokens:write` | Auto-provision API tokens |
-| `state:app-states:read` | Read cached tokens + audit trail |
-| `state:app-states:write` | Cache tokens + audit trail |
-| `openTelemetryTrace.ingest` | OTLP trace ingest |
+| Scope                              | Purpose                          |
+| ---------------------------------- | -------------------------------- |
+| `storage:entities:read`            | DQL entity queries               |
+| `environment-api:entities:read`    | Entity API for relationships     |
+| `environment-api:entities:write`   | Custom device bridge creation    |
+| `storage:buckets:read`             | DQL query support                |
+| `storage:events:read`              | DQL entity queries               |
+| `storage:metrics:write`            | Metric ingest                    |
+| `environment-api:metrics:write`    | SDK metricsClient.ingest()       |
+| `settings:objects:read`            | Read Settings                    |
+| `settings:objects:write`           | Write topology Settings          |
+| `settings:schemas:read`            | Read Settings schemas            |
+| `environment-api:events:write`     | Event ingest                     |
+| `environment-api:api-tokens:write` | Auto-provision API tokens        |
+| `state:app-states:read`            | Read cached tokens + audit trail |
+| `state:app-states:write`           | Cache tokens + audit trail       |
+| `openTelemetryTrace.ingest`        | OTLP trace ingest                |
 
 ---
 
