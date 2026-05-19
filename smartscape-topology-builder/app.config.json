@@ -3,9 +3,10 @@
   "environmentUrl": "https://qof78400.apps.dynatrace.com/",
   "app": {
     "name": "Smartscape Topology Builder",
-    "version": "1.10.3",
+    "version": "1.11.0",
     "description": "GUI for creating custom Smartscape topology rules via Settings API",
     "id": "my.smartscape.topology.builder",
+    "icon": "./ui/assets/app-icon.svg",
     "scopes": [
       { "name": "storage:entities:read", "comment": "DQL fetch dt.entity.* queries" },
       { "name": "environment-api:entities:read", "comment": "Entity API v2 for relationships" },

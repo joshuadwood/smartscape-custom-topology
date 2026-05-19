@@ -3,6 +3,10 @@ import { AppHeader } from '@dynatrace/strato-components-preview/layouts';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Colors from '@dynatrace/strato-design-tokens/colors';
 
+const APP_VERSION = '1.11.0';
+
+const APP_ICON = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none"><path d="M32 8 L52 28 L32 48 L12 28 Z" stroke="#6B2FA0" stroke-width="3" fill="none"/><path d="M32 14 L48 28 L32 42 L16 28 Z" stroke="#6B2FA0" stroke-width="2.5" fill="none"/><path d="M32 20 L44 28 L32 36 L20 28 Z" stroke="#6B2FA0" stroke-width="2" fill="none"/><text x="32" y="32" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="bold" fill="#6B2FA0" dy="0.35em">ST</text><line x1="36" y1="50" x2="56" y2="50" stroke="#6B2FA0" stroke-width="3"/><polyline points="50,44 56,50 50,56" stroke="#6B2FA0" stroke-width="3" fill="none"/></svg>`)}`;
+
 const TABS = [
   { label: '🗺️ Topology Builder', path: '/' },
   { label: '🔗 Relationships', path: '/relationships' },
@@ -21,6 +25,31 @@ export const Header: React.FC = () => {
           <AppHeader.AppNavLink />
         </AppHeader.NavItems>
       </AppHeader>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '8px 16px',
+        background: Colors.Background.Surface.Default,
+        borderBottom: `1px solid ${Colors.Border.Neutral.Default}`,
+      }}>
+        <img src={APP_ICON} alt="App Icon" style={{ width: 28, height: 28 }} />
+        <span style={{ fontWeight: 600, fontSize: 16, color: Colors.Text.Neutral.Default }}>
+          Smartscape Topology Builder
+        </span>
+        <span style={{ fontSize: 11, color: Colors.Text.Neutral.Subdued, marginLeft: -4 }}>
+          v{APP_VERSION}
+        </span>
+        <span style={{
+          marginLeft: 'auto',
+          fontSize: 11,
+          color: Colors.Text.Warning.Default,
+          fontStyle: 'italic',
+          maxWidth: 500,
+        }}>
+          ⚠️ Topologies created here are at-will and may not represent actual infrastructure relationships. Proceed with caution.
+        </span>
+      </div>
       <nav style={{
         display: 'flex',
         gap: 0,
