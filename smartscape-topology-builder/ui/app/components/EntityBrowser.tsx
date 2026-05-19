@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { Flex } from '@dynatrace/strato-components/layouts';
 import { Heading, Text } from '@dynatrace/strato-components/typography';
 import { TextInput } from '@dynatrace/strato-components-preview/forms';
@@ -21,6 +21,30 @@ export const EntityBrowser: React.FC<EntityBrowserProps> = ({ onAddEntity, added
   const [search, setSearch] = useState('');
   const { entities, isLoading, error } = useEntities(selectedType, search);
   const { customTypes, isLoading: customTypesLoading } = useCustomEntityTypes();
+  const [typePanelHeight, setTypePanelHeight] = useState(120);
+  const dragging = useRef(false);
+  const startY = useRef(0);
+  const startH = useRef(0);
+
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    dragging.current = true;
+    startY.current = e.clientY;
+    startH.current = typePanelHeight;
+
+    const onMove = (ev: MouseEvent) => {
+      if (!dragging.current) return;
+      const delta = ev.clientY - startY.current;
+      setTypePanelHeight(Math.max(60, Math.min(400, startH.current + delta)));
+    };
+    const onUp = () => {
+      dragging.current = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [typePanelHeight]);
 
   const allTypes = useMemo(() => {
     const builtIn = ENTITY_TYPES.map((et) => ({ id: et.id, label: et.label }));
@@ -42,8 +66,8 @@ export const EntityBrowser: React.FC<EntityBrowserProps> = ({ onAddEntity, added
 
       <div style={{
         display: 'flex', flexWrap: 'wrap', gap: 4, padding: '6px 8px',
-        borderBottom: `1px solid ${Colors.Border.Neutral.Default}`, flexShrink: 0,
-        maxHeight: 120, overflowY: 'auto',
+        flexShrink: 0,
+        maxHeight: typePanelHeight, overflowY: 'auto',
       }}>
         {allTypes.map((et) => {
           const active = selectedType === et.id;
@@ -64,6 +88,22 @@ export const EntityBrowser: React.FC<EntityBrowserProps> = ({ onAddEntity, added
           );
         })}
         {customTypesLoading && <ProgressCircle size="small" />}
+      </div>
+
+      {/* Draggable resize handle */}
+      <div
+        onMouseDown={handleDragStart}
+        style={{
+          height: 6,
+          cursor: 'row-resize',
+          background: Colors.Border.Neutral.Default,
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div style={{ width: 32, height: 2, borderRadius: 1, background: Colors.Text.Neutral.Subdued }} />
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
