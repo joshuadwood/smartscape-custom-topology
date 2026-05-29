@@ -1,0 +1,38 @@
+/* SE Fieldcraft — Dynatrace-tinted design tokens (shared with Skills Catalog / System Prompt / Fleet Health) */
+:root {
+  /* Brand accents */
+  --dt-purple:      #6F2DA8;
+  --dt-purple-soft: #8B47C7;
+  --dt-blue:        #1496FF;
+  --dt-blue-soft:   #3FA9FF;
+  --dt-lime:        #BEDF2A;
+  --dt-lime-soft:   #D2EE5F;
+  --dt-green:       #73BE28;
+
+  /* Surfaces */
+  --bg:          #0B0F1A;
+  --bg-1:        #131826;
+  --bg-2:        #1A2033;
+  --border:      #232A3D;
+  --border-soft: #1B2235;
+  --hover:       #1F2640;
+
+  /* Text */
+  --fg:      #EDF1FA;
+  --fg-2:    #B5BDD1;
+  --fg-3:    #7A8299;
+  --fg-mute: #535B72;
+
+  /* Status */
+  --warn:   #E0A800;
+  --danger: #E5484D;
+
+  /* Radii */
+  --radius:    8px;
+  --radius-lg: 10px;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar       { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #2a3149; border-radius: 6px; }
+::-webkit-scrollbar-track { background: transparent; }

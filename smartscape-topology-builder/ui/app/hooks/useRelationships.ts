@@ -59,7 +59,7 @@ export function useRelationships(entityTypeSelector: string) {
       // Paginate through all results
       do {
         const config: Record<string, unknown> = {
-          entitySelector: `type(${entityTypeSelector})`,
+          entitySelector: `type("${entityTypeSelector}")`,
           fields: '+fromRelationships,+toRelationships',
           pageSize: 50,
         };

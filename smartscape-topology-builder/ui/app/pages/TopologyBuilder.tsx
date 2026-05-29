@@ -1,13 +1,8 @@
 import React, { useState, useCallback, useId, useEffect } from 'react';
-import { Flex } from '@dynatrace/strato-components/layouts';
-import { Heading, Text } from '@dynatrace/strato-components/typography';
-import { Button } from '@dynatrace/strato-components/buttons';
-import { Select } from '@dynatrace/strato-components-preview/forms';
-import { Tooltip } from '@dynatrace/strato-components-preview/overlays';
-import Colors from '@dynatrace/strato-design-tokens/colors';
 import { useNavigate } from 'react-router-dom';
 import { EntityBrowser } from '../components/EntityBrowser';
 import { TopologyCanvas } from '../components/TopologyCanvas';
+import { RuleInspector } from '../components/RuleInspector';
 import { ConfirmTopologyModal } from '../components/ConfirmTopologyModal';
 import type {
   CanvasEntity, CanvasEdge, DynatraceEntity, InteractionMode,
@@ -45,6 +40,7 @@ export const TopologyBuilder: React.FC = () => {
   const [mode, setMode] = useState<InteractionMode>('select');
   const [edgeSourceId, setEdgeSourceId] = useState<string | null>(null);
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [pendingRelType, setPendingRelType] = useState<string>('CALLS');
   const [isBidirectional, setIsBidirectional] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -58,7 +54,6 @@ export const TopologyBuilder: React.FC = () => {
 
   const addedEntityIds = new Set(canvasEntities.map((e) => e.entityId));
 
-  // Place new entities in a grid layout
   const getNextPosition = useCallback(() => {
     const col = canvasEntities.length % 4;
     const row = Math.floor(canvasEntities.length / 4);
@@ -89,7 +84,6 @@ export const TopologyBuilder: React.FC = () => {
       } else if (edgeSourceId === entityId) {
         setEdgeSourceId(null);
       } else {
-        // Create edge
         const edgeId = `${idPrefix}-${edgeSourceId}-${entityId}`;
         const duplicate = canvasEdges.some(
           (e) => (e.sourceEntityId === edgeSourceId && e.targetEntityId === entityId)
@@ -107,10 +101,11 @@ export const TopologyBuilder: React.FC = () => {
             },
           ]);
         }
-        setEdgeSourceId(entityId); // stay in connect mode, new source is target
+        setEdgeSourceId(entityId);
       }
     } else {
       setSelectedEntityId((prev) => prev === entityId ? null : entityId);
+      setSelectedEdgeId(null);
     }
   }, [mode, edgeSourceId, canvasEdges, pendingRelType, isBidirectional, idPrefix]);
 
@@ -125,39 +120,53 @@ export const TopologyBuilder: React.FC = () => {
 
   const handleCanvasClick = useCallback(() => {
     setSelectedEntityId(null);
+    setSelectedEdgeId(null);
     if (mode === 'connect') setEdgeSourceId(null);
   }, [mode]);
 
+  const handleEdgeSelect = useCallback((edgeId: string) => {
+    setSelectedEdgeId((prev) => prev === edgeId ? null : edgeId);
+    setSelectedEntityId(null);
+  }, []);
+
   const handleEdgeRemove = useCallback((edgeId: string) => {
     setCanvasEdges((prev) => prev.filter((e) => e.id !== edgeId));
+    setSelectedEdgeId((prev) => prev === edgeId ? null : prev);
   }, []);
 
   const handleModeChange = useCallback((newMode: InteractionMode) => {
     setMode(newMode);
     setEdgeSourceId(null);
     setSelectedEntityId(null);
+    setSelectedEdgeId(null);
   }, []);
 
-  // ESC key: cancel edge source selection, or exit connect mode entirely
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (mode === 'connect') {
           if (edgeSourceId) {
-            setEdgeSourceId(null); // first ESC clears source selection
+            setEdgeSourceId(null);
           } else {
-            setMode('select'); // second ESC exits connect mode
+            setMode('select');
           }
         } else {
           setSelectedEntityId(null);
+          setSelectedEdgeId(null);
+        }
+      }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedEdgeId) {
+        const active = document.activeElement;
+        if (!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA')) {
+          handleEdgeRemove(selectedEdgeId);
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mode, edgeSourceId]);
+  }, [mode, edgeSourceId, selectedEdgeId, handleEdgeRemove]);
 
-  // Right-click on canvas: cancel connect source or exit connect mode
   const handleCanvasContextMenu = useCallback((e: React.MouseEvent) => {
     if (mode === 'connect') {
       e.preventDefault();
@@ -177,200 +186,344 @@ export const TopologyBuilder: React.FC = () => {
     if (result.tracesIngested > 0) parts.push(`${result.tracesIngested} trace(s) for Smartscape`);
 
     const hasErrors = result.errors.length > 0 || result.metricErrors.length > 0;
-    const hasTraceErrors = result.traceErrors.length > 0;
-    const hasSuccess = parts.length > 0;
     const allErrors = [...result.errors, ...result.metricErrors, ...result.traceErrors];
+    const hasSuccess = parts.length > 0;
 
     if (hasSuccess && !hasErrors) {
-      setResultBanner({
-        text: `Created ${parts.join(', ')}. Rules are in Settings > Topology model.`,
-        variant: 'success',
-      });
+      setResultBanner({ text: `Created ${parts.join(', ')}.`, variant: 'success' });
     } else if (hasSuccess && hasErrors) {
-      setResultBanner({
-        text: `Partially completed: ${parts.join(', ')}.`,
-        variant: 'warning',
-        details: allErrors.join('; '),
-      });
+      setResultBanner({ text: `Partially completed: ${parts.join(', ')}.`, variant: 'warning', details: allErrors.join('; ') });
     } else if (!hasSuccess && hasErrors) {
-      setResultBanner({
-        text: 'Rule creation failed.',
-        variant: 'critical',
-        details: allErrors.join('; '),
-      });
+      setResultBanner({ text: 'Rule creation failed.', variant: 'critical', details: allErrors.join('; ') });
     } else {
-      setResultBanner({
-        text: 'All rules already exist — no changes were needed.',
-        variant: 'success',
-      });
+      setResultBanner({ text: 'All rules already exist — no changes needed.', variant: 'success' });
     }
     setCanvasEdges([]);
+    setSelectedEdgeId(null);
   }, []);
 
-  const selectedEntity = canvasEntities.find((e) => e.entityId === selectedEntityId);
+  const handleClearCanvas = useCallback(() => {
+    setCanvasEntities([]);
+    setCanvasEdges([]);
+    setEdgeSourceId(null);
+    setSelectedEntityId(null);
+    setSelectedEdgeId(null);
+  }, []);
+
+  const handleAutoLayout = useCallback(() => {
+    setCanvasEntities((prev) =>
+      prev.map((e, i) => ({
+        ...e,
+        x: 60 + (i % 4) * (ENTITY_NODE_WIDTH + 80),
+        y: 60 + Math.floor(i / 4) * (ENTITY_NODE_HEIGHT + 80),
+      }))
+    );
+  }, []);
 
   return (
-    <Flex flexDirection="column" style={{ height: '100%', overflow: 'hidden' }}>
-      {/* Toolbar */}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {/* Page header */}
       <div style={{
-        padding: '8px 16px',
-        borderBottom: `1px solid ${Colors.Border.Neutral.Default}`,
-        background: Colors.Background.Surface.Default,
+        padding: '14px 24px 12px',
+        borderBottom: '1px solid var(--border-soft)',
         flexShrink: 0,
       }}>
-        <Flex alignItems="center" gap={12} flexWrap="wrap">
-          <Heading level={5} style={{ margin: 0 }}>Topology Builder</Heading>
-
-          <div style={{ width: 1, height: 24, background: Colors.Border.Neutral.Default }} />
-
-          {/* Mode buttons */}
-          <Flex gap={4}>
-            <ModeButton active={mode === 'select'} onClick={() => handleModeChange('select')} title="Select & Drag entities">
-              ✥ Select
-            </ModeButton>
-            <ModeButton active={mode === 'connect'} onClick={() => handleModeChange('connect')} title="Click source then target to draw edge">
-              ⟶ Connect
-            </ModeButton>
-          </Flex>
-
-          {/* Connect mode options */}
-          {mode === 'connect' && (
-            <Flex alignItems="center" gap={8}>
-              <Text style={{ fontSize: 13 }}>Relationship:</Text>
-              <Select
-                value={pendingRelType}
-                onChange={(v) => setPendingRelType(String(v))}
-                style={{ minWidth: 130 }}
-              >
-                <Select.Content>
-                  {RELATIONSHIP_TYPES.map((rt) => (
-                    <Select.Option key={rt} value={rt}>{rt}</Select.Option>
-                  ))}
-                </Select.Content>
-              </Select>
-              <Flex alignItems="center" gap={4}>
-                <input
-                  type="checkbox"
-                  id="bidir-toggle"
-                  checked={isBidirectional}
-                  onChange={(e) => setIsBidirectional(e.target.checked)}
-                />
-                <label htmlFor="bidir-toggle" style={{ fontSize: 13, cursor: 'pointer' }}>Bidirectional</label>
-              </Flex>
-              {edgeSourceId && (
-                <Text style={{ fontSize: 12, color: Colors.Text.Neutral.Subdued }}>
-                  Source selected — click a target entity
-                </Text>
-              )}
-            </Flex>
-          )}
-
-          <div style={{ flex: 1 }} />
-
-          {/* Clear & Create */}
-          <Button
-            variant="default"
-            onClick={() => { setCanvasEntities([]); setCanvasEdges([]); setEdgeSourceId(null); setSelectedEntityId(null); }}
-            disabled={canvasEntities.length === 0}
-          >
-            Clear Canvas
-          </Button>
-          <Button
-            variant="accent"
-            onClick={() => setShowConfirmModal(true)}
-            disabled={canvasEdges.length === 0}
-          >
-            Create {canvasEdges.length > 0 ? `${canvasEdges.length} ` : ''}Rule{canvasEdges.length !== 1 ? 's' : ''}
-          </Button>
-        </Flex>
-
-        {/* Connect mode hint */}
-        {mode === 'connect' && (
-          <Text color="secondary" style={{ fontSize: 12, marginTop: 4, display: 'block' }}>
-            💡 Click an entity to set as source, then click another entity to create a directed edge. Click the edge to remove it.
-            Press <strong>ESC</strong> or <strong>right-click</strong> to cancel.
-          </Text>
-        )}
-
-        {resultBanner && (
-          <div style={{
-            marginTop: 8,
-            padding: '10px 14px',
-            borderRadius: 6,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            background: resultBanner.variant === 'critical' ? Colors.Background.Container.Critical.Default
-              : resultBanner.variant === 'warning' ? Colors.Background.Container.Warning.Default : Colors.Background.Container.Success.Default,
-            border: `1px solid ${resultBanner.variant === 'critical' ? Colors.Border.Critical.Default
-              : resultBanner.variant === 'warning' ? Colors.Border.Warning.Default : Colors.Border.Success.Default}`,
-          }}>
-            <span style={{ fontSize: 16 }}>
-              {resultBanner.variant === 'critical' ? '❌' : resultBanner.variant === 'warning' ? '⚠️' : '✅'}
-            </span>
-            <div style={{ flex: 1 }}>
-              <Text style={{
-                fontSize: 13,
-                color: resultBanner.variant === 'critical' ? Colors.Text.Critical.Default
-                  : resultBanner.variant === 'warning' ? Colors.Text.Warning.Default : Colors.Text.Success.Default,
-              }}>
-                {resultBanner.text}
-              </Text>
-              {resultBanner.details && (
-                <Text style={{ fontSize: 11, display: 'block', marginTop: 4,
-                  color: Colors.Text.Neutral.Subdued }}>
-                  {resultBanner.details}
-                </Text>
-              )}
-            </div>
-            <button
-              onClick={() => navigate('/audit')}
-              style={{
-                background: Colors.Background.Container.Neutral.Subdued,
-                border: `1px solid ${Colors.Border.Neutral.Default}`,
-                borderRadius: 4,
-                padding: '4px 12px',
-                fontSize: 12,
-                color: Colors.Text.Neutral.Default,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              📜 View Audit Trail
-            </button>
-            <button
-              onClick={() => setResultBanner(null)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: Colors.Text.Neutral.Subdued, padding: '0 4px' }}
-            >
-              ×
-            </button>
-          </div>
-        )}
+        <div style={{
+          fontSize: 11,
+          color: 'var(--fg-mute)',
+          letterSpacing: '0.08em',
+          marginBottom: 4,
+        }}>
+          Topology › Builder
+        </div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 16 }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--fg)' }}>
+            Topology builder
+          </h2>
+          <span style={{ fontSize: 13, color: 'var(--fg-3)' }}>
+            Draw custom Smartscape relationships between entities
+          </span>
+        </div>
       </div>
 
-      {/* Main area */}
-      <Flex style={{ flex: 1, overflow: 'hidden' }}>
-        <EntityBrowser onAddEntity={handleAddEntity} addedEntityIds={addedEntityIds} />
+      {/* Toolbar */}
+      <div style={{
+        padding: '8px 18px',
+        borderBottom: '1px solid var(--border-soft)',
+        background: 'var(--bg-1)',
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        flexWrap: 'wrap',
+      }}>
+        {/* Mode segmented control */}
+        <div style={{
+          display: 'flex',
+          background: 'var(--bg)',
+          border: '1px solid var(--border)',
+          borderRadius: 8,
+          overflow: 'hidden',
+        }}>
+          {(['select', 'connect'] as InteractionMode[]).map((m) => (
+            <button
+              key={m}
+              onClick={() => handleModeChange(m)}
+              style={{
+                padding: '5px 14px',
+                border: 'none',
+                background: mode === m ? 'var(--dt-purple)' : 'transparent',
+                color: mode === m ? '#fff' : 'var(--fg-3)',
+                cursor: 'pointer',
+                fontSize: 12,
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                transition: 'all 0.12s',
+              }}
+            >
+              {m === 'select' ? (
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M2 2l8 20 2-8 8-2z"/>
+                </svg>
+              ) : (
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M5 12h14M13 6l6 6-6 6"/>
+                </svg>
+              )}
+              {m === 'select' ? 'Select' : 'Connect'}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ width: 1, height: 24, background: 'var(--border)', flexShrink: 0 }} />
+
+        {/* Relationship type */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 11, color: 'var(--fg-mute)', whiteSpace: 'nowrap' }}>Relationship</span>
+          <select
+            value={pendingRelType}
+            onChange={(e) => setPendingRelType(e.target.value)}
+            style={{
+              background: 'var(--bg)',
+              border: '1px solid var(--border)',
+              color: 'var(--fg)',
+              fontSize: 12,
+              borderRadius: 6,
+              padding: '4px 8px',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              minWidth: 100,
+            }}
+          >
+            {RELATIONSHIP_TYPES.map((rt) => (
+              <option key={rt} value={rt}>{rt}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Bidirectional toggle */}
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+          <div
+            onClick={() => setIsBidirectional((b) => !b)}
+            style={{
+              width: 28,
+              height: 16,
+              borderRadius: 999,
+              background: isBidirectional ? 'var(--dt-purple)' : 'var(--border)',
+              position: 'relative',
+              cursor: 'pointer',
+              transition: 'background 0.2s',
+              flexShrink: 0,
+            }}
+          >
+            <span style={{
+              position: 'absolute',
+              top: 2,
+              left: isBidirectional ? 14 : 2,
+              width: 12,
+              height: 12,
+              borderRadius: '50%',
+              background: '#fff',
+              transition: 'left 0.15s',
+            }} />
+          </div>
+          <span style={{ fontSize: 11, color: 'var(--fg-3)', whiteSpace: 'nowrap' }}>Bidirectional</span>
+        </label>
+
+        <div style={{ width: 1, height: 24, background: 'var(--border)', flexShrink: 0 }} />
+
+        {/* Auto-layout */}
+        <button
+          onClick={handleAutoLayout}
+          disabled={canvasEntities.length === 0}
+          title="Auto-arrange entities in a grid"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '5px 11px', borderRadius: 7,
+            border: '1px solid var(--border)', background: 'var(--bg)',
+            color: canvasEntities.length === 0 ? 'var(--fg-mute)' : 'var(--fg-2)',
+            cursor: canvasEntities.length === 0 ? 'not-allowed' : 'pointer',
+            fontSize: 12,
+          }}
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+          </svg>
+          Layout
+        </button>
+
+        <div style={{ flex: 1 }} />
+
+        {/* Right cluster: rule summary */}
+        {(canvasEntities.length > 0 || canvasEdges.length > 0) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{
+              fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+              fontSize: 11,
+              color: 'var(--fg-mute)',
+            }}>
+              {canvasEntities.length}E · {canvasEdges.length}R
+            </span>
+          </div>
+        )}
+
+        {edgeSourceId && mode === 'connect' && (
+          <span style={{
+            fontSize: 11,
+            color: 'var(--dt-purple-soft)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+          }}>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <circle cx="12" cy="12" r="9"/>
+            </svg>
+            Source selected
+          </span>
+        )}
+
+        <button
+          onClick={handleClearCanvas}
+          disabled={canvasEntities.length === 0}
+          style={{
+            padding: '5px 14px', borderRadius: 7,
+            border: '1px solid var(--border)', background: 'var(--bg)',
+            color: canvasEntities.length === 0 ? 'var(--fg-mute)' : 'var(--fg-2)',
+            cursor: canvasEntities.length === 0 ? 'not-allowed' : 'pointer',
+            fontSize: 12,
+          }}
+        >
+          Clear canvas
+        </button>
+
+        <button
+          onClick={() => setShowConfirmModal(true)}
+          disabled={canvasEdges.length === 0}
+          style={{
+            padding: '5px 16px', borderRadius: 7,
+            border: 'none',
+            background: canvasEdges.length === 0 ? 'rgba(111, 45, 168, 0.25)' : 'var(--dt-purple)',
+            color: canvasEdges.length === 0 ? 'var(--fg-mute)' : '#fff',
+            cursor: canvasEdges.length === 0 ? 'not-allowed' : 'pointer',
+            fontSize: 12,
+            fontWeight: 600,
+          }}
+        >
+          Create {canvasEdges.length > 0 ? `${canvasEdges.length} ` : ''}rule{canvasEdges.length !== 1 ? 's' : ''}
+        </button>
+      </div>
+
+      {/* Result banner */}
+      {resultBanner && (
+        <div style={{
+          padding: '9px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          background: resultBanner.variant === 'critical'
+            ? 'rgba(229, 72, 77, 0.10)'
+            : resultBanner.variant === 'warning'
+              ? 'rgba(224, 168, 0, 0.10)'
+              : 'rgba(115, 190, 40, 0.10)',
+          borderBottom: '1px solid',
+          borderBottomColor: resultBanner.variant === 'critical'
+            ? 'rgba(229, 72, 77, 0.25)'
+            : resultBanner.variant === 'warning'
+              ? 'rgba(224, 168, 0, 0.25)'
+              : 'rgba(115, 190, 40, 0.25)',
+          flexShrink: 0,
+        }}>
+          {resultBanner.variant === 'critical' ? (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          ) : resultBanner.variant === 'warning' ? (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" strokeWidth="2"><path d="M10.3 3.2l-7.7 13.3A2 2 0 0 0 4.3 20h15.4a2 2 0 0 0 1.7-3.5L13.7 3.2a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--dt-green)" strokeWidth="2"><path d="M5 12l5 5L20 7"/></svg>
+          )}
+          <span style={{
+            fontSize: 12,
+            color: resultBanner.variant === 'critical' ? 'var(--danger)'
+              : resultBanner.variant === 'warning' ? 'var(--warn)' : 'var(--dt-green)',
+            flex: 1,
+          }}>
+            {resultBanner.text}
+            {resultBanner.details && (
+              <span style={{ color: 'var(--fg-mute)', marginLeft: 8, fontSize: 11 }}>{resultBanner.details}</span>
+            )}
+          </span>
+          <button
+            onClick={() => navigate('/audit')}
+            style={{
+              background: 'transparent', border: '1px solid var(--border)',
+              borderRadius: 5, padding: '3px 10px', fontSize: 11,
+              color: 'var(--fg-2)', cursor: 'pointer',
+            }}
+          >
+            View Audit Trail
+          </button>
+          <button
+            onClick={() => setResultBanner(null)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--fg-mute)', padding: '0 4px' }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* 3-panel body */}
+      <div style={{ display: 'grid', gridTemplateColumns: '280px minmax(0, 1fr) 280px', flex: 1, overflow: 'hidden', minHeight: 0 }}>
+        <EntityBrowser
+          onAddEntity={handleAddEntity}
+          addedEntityIds={addedEntityIds}
+          canvasEntities={canvasEntities}
+        />
 
         <TopologyCanvas
           entities={canvasEntities}
           edges={canvasEdges}
           mode={mode}
           edgeSourceId={edgeSourceId}
+          selectedEdgeId={selectedEdgeId}
           onEntityMove={handleEntityMove}
           onEntitySelect={handleEntitySelect}
           onEntityRemove={handleEntityRemove}
           onCanvasClick={handleCanvasClick}
+          onEdgeSelect={handleEdgeSelect}
           onEdgeRemove={handleEdgeRemove}
           selectedEntityId={selectedEntityId}
           onContextMenu={handleCanvasContextMenu}
         />
 
-        {/* Entity detail panel */}
-        {selectedEntity && mode === 'select' && (
-          <EntityDetailPanel entity={selectedEntity} />
-        )}
-      </Flex>
+        <RuleInspector
+          edges={canvasEdges}
+          entities={canvasEntities}
+          selectedEdgeId={selectedEdgeId}
+          onEdgeRemove={handleEdgeRemove}
+        />
+      </div>
 
       <ConfirmTopologyModal
         isOpen={showConfirmModal}
@@ -379,77 +532,6 @@ export const TopologyBuilder: React.FC = () => {
         onConfirm={handleConfirmCreate}
         onClose={() => setShowConfirmModal(false)}
       />
-    </Flex>
+    </div>
   );
 };
-
-interface ModeButtonProps {
-  active: boolean;
-  onClick: () => void;
-  title: string;
-  children: React.ReactNode;
-}
-
-const ModeButton: React.FC<ModeButtonProps> = ({ active, onClick, title, children }) => (
-  <Tooltip text={title}>
-    <button
-      onClick={onClick}
-      style={{
-        padding: '4px 12px',
-        borderRadius: 4,
-        border: `1px solid ${active ? Colors.Border.Neutral.Accent : Colors.Border.Neutral.Default}`,
-        background: active ? Colors.Background.Container.Neutral.Accent : Colors.Background.Surface.Default,
-        color: active ? Colors.Text.Neutral.OnAccent.Default : Colors.Text.Neutral.Default,
-        cursor: 'pointer',
-        fontSize: 13,
-        fontWeight: active ? 600 : 400,
-        transition: 'all 0.15s',
-      }}
-    >
-      {children}
-    </button>
-  </Tooltip>
-);
-
-interface EntityDetailPanelProps {
-  entity: CanvasEntity;
-}
-
-const EntityDetailPanel: React.FC<EntityDetailPanelProps> = ({ entity }) => (
-  <div style={{
-    width: 240, borderLeft: `1px solid ${Colors.Border.Neutral.Default}`,
-    padding: 16, overflowY: 'auto', flexShrink: 0,
-    background: Colors.Background.Surface.Default,
-  }}>
-    <Heading level={6}>Entity Details</Heading>
-    <Text style={{ fontWeight: 600, fontSize: 14, display: 'block', marginTop: 8 }}>
-      {entity.displayName}
-    </Text>
-    <Text color="secondary" style={{ fontSize: 12, display: 'block' }}>{entity.type}</Text>
-
-    <div style={{ marginTop: 12 }}>
-      <Text style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Entity ID</Text>
-      <Text color="secondary" style={{ fontSize: 11, wordBreak: 'break-all' }}>{entity.entityId}</Text>
-    </div>
-
-    {entity.tags.length > 0 && (
-      <div style={{ marginTop: 12 }}>
-        <Text style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Tags</Text>
-        <Flex flexWrap="wrap" gap={4}>
-          {entity.tags.map((tag) => (
-            <span
-              key={`${tag.context}:${tag.key}:${tag.value ?? ''}`}
-              style={{
-                fontSize: 11, padding: '2px 6px', borderRadius: 10,
-                background: Colors.Background.Surface.Backdrop,
-                color: Colors.Text.Neutral.Default,
-              }}
-            >
-              {tag.value ? `${tag.key}: ${tag.value}` : tag.key}
-            </span>
-          ))}
-        </Flex>
-      </div>
-    )}
-  </div>
-);

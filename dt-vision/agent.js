@@ -38,6 +38,7 @@ function buildConfig(userConfig) {
     maxSteps: userConfig.maxSteps ?? 15,
     iframeWaitMs: userConfig.iframeWaitMs ?? 8000,
     artifactsDir: userConfig.artifactsDir ?? './artifacts',
+    startPath: userConfig.startPath ?? null,
     onStep: userConfig.onStep ?? null,
     onDone: userConfig.onDone ?? null,
     onError: userConfig.onError ?? null,
@@ -158,7 +159,7 @@ export async function runDTVisionTask(userConfig) {
     console.log('[agent] API context retrieved:', Object.keys(apiContext));
   }
 
-  const startPath = findBestStartPath(config.goal);
+  const startPath = config.startPath ?? findBestStartPath(config.goal);
   console.log(`[agent] starting at: ${config.tenantURL}${startPath}`);
 
   const browser = new DTBrowser({

@@ -2,7 +2,7 @@
 
 A Dynatrace App that provides a GUI for creating custom topology rules in Smartscape. Draw edges between any two entities — services, hosts, process groups, custom devices — and the app handles everything needed to make those edges appear in the Smartscape 2.0 service-overview.
 
-**Version**: 1.10.3  
+**Version**: 1.12.7  
 **Platform**: Dynatrace AppEngine (TypeScript/React + Strato Design System)
 
 ---
@@ -82,7 +82,7 @@ The app will be available at:
 2. Use the **Entity Browser** (left sidebar) to filter entities by type (Services, Hosts, Process Groups, etc.)
 3. Click entities to place them on the canvas
 4. Switch to **Connect** mode (→ Connect button)
-5. Click a source entity, then click a target entity to draw an edge
+5. Click the **handle circle** on the edge of a source entity node (or click the node itself), then click a target entity's handle or node to draw an edge
 6. Choose a relationship type (calls, runsOn, isServiceOf, etc.)
 7. Click **Create Rules** and confirm in the modal
 8. Wait 5–15 minutes for Smartscape to process the new topology
@@ -93,7 +93,7 @@ The app will be available at:
 
 ### 🗺️ Topology Builder
 
-The main canvas editor. Browse entities by type, place them on the SVG canvas, switch between Select and Connect modes, and draw edges between them.
+The main canvas editor. Browse entities by type (built-in types like Services, Hosts, Process Groups, and custom generic entity types), place them on the SVG canvas, switch between Select and Connect modes, and draw edges between them. In Connect mode, click the handle circles on entity node edges to start drawing a line from that exact anchor point — handles snap-target the nearest node when you release.
 
 ![Topology Builder](smartscape-topology-builder/docs/screenshots/topology-builder.png)
 

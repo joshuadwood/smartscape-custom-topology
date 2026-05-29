@@ -1,8 +1,4 @@
 import React, { useRef, useCallback, useState } from 'react';
-import { Flex } from '@dynatrace/strato-components/layouts';
-import { Text } from '@dynatrace/strato-components/typography';
-import Colors from '@dynatrace/strato-design-tokens/colors';
-import BoxShadows from '@dynatrace/strato-design-tokens/box-shadows';
 import type { CanvasEntity, InteractionMode } from '../types';
 
 interface EntityNodeCardProps {
@@ -10,28 +6,50 @@ interface EntityNodeCardProps {
   isSelected: boolean;
   isEdgeSource: boolean;
   mode: InteractionMode;
+  zoom?: number;
   onSelect: (entityId: string) => void;
   onDragEnd: (entityId: string, x: number, y: number) => void;
   onRemove: (entityId: string) => void;
+  onHandleMouseDown?: (entityId: string, side: 'left' | 'right') => void;
 }
 
 export const ENTITY_NODE_WIDTH = 220;
-export const ENTITY_NODE_HEIGHT = 90;
+export const ENTITY_NODE_HEIGHT = 110; // used for edge midpoint calculation
+
+// Design-spec entity type → accent color map
+const TYPE_ACCENT: Record<string, string> = {
+  SERVICE:                       'var(--dt-blue)',
+  HOST:                          'var(--dt-lime)',
+  PROCESS_GROUP:                 'var(--dt-purple-soft)',
+  PROCESS_GROUP_INSTANCE:        'var(--dt-purple-soft)',
+  APPLICATION:                   'var(--dt-green)',
+  CUSTOM_DEVICE:                 'var(--fg-3)',
+  CLOUD_APPLICATION:             'var(--dt-blue)',
+  CLOUD_APPLICATION_NAMESPACE:   'var(--dt-purple-soft)',
+  KUBERNETES_CLUSTER:            'var(--dt-lime)',
+  HTTP_CHECK:                    'var(--dt-blue)',
+  SYNTHETIC_TEST:                'var(--dt-blue)',
+};
+
+function getAccentColor(type: string): string {
+  return TYPE_ACCENT[type.toUpperCase()] ?? 'var(--dt-blue)';
+}
 
 export const EntityNodeCard: React.FC<EntityNodeCardProps> = ({
   entity,
   isSelected,
   isEdgeSource,
   mode,
+  zoom = 1,
   onSelect,
   onDragEnd,
   onRemove,
+  onHandleMouseDown,
 }) => {
   const dragStart = useRef<{ mouseX: number; mouseY: number; entityX: number; entityY: number } | null>(null);
   const isDragging = useRef(false);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    // Allow dragging in any mode
     e.stopPropagation();
     isDragging.current = false;
     dragStart.current = {
@@ -47,7 +65,10 @@ export const EntityNodeCard: React.FC<EntityNodeCardProps> = ({
       const dy = me.clientY - dragStart.current.mouseY;
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) isDragging.current = true;
       if (isDragging.current) {
-        onDragEnd(entity.entityId, dragStart.current.entityX + dx, dragStart.current.entityY + dy);
+        onDragEnd(entity.entityId,
+          dragStart.current.entityX + dx / zoom,
+          dragStart.current.entityY + dy / zoom,
+        );
       }
     };
 
@@ -59,7 +80,7 @@ export const EntityNodeCard: React.FC<EntityNodeCardProps> = ({
 
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
-  }, [mode, entity, onDragEnd]);
+  }, [entity, onDragEnd, zoom]);
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -68,17 +89,20 @@ export const EntityNodeCard: React.FC<EntityNodeCardProps> = ({
     }
   }, [entity.entityId, onSelect]);
 
-  const borderColor = isEdgeSource
-    ? Colors.Charts.Categorical.Color01.Default
-    : isSelected
-    ? Colors.Border.Neutral.Accent
-    : Colors.Border.Neutral.Default;
+  const accent = getAccentColor(entity.type);
 
-  const bgColor = isEdgeSource
-    ? Colors.Background.Container.Primary.Default
-    : isSelected
-    ? Colors.Background.Surface.Default
-    : Colors.Background.Surface.Default;
+  const isActive = isEdgeSource || isSelected;
+  const borderColor = isActive ? 'var(--dt-purple)' : 'var(--border)';
+  const boxShadow = isSelected
+    ? '0 4px 16px rgba(0,0,0,0.5), 0 0 0 3px rgba(111,45,168,0.25)'
+    : isEdgeSource
+    ? '0 4px 16px rgba(0,0,0,0.5), 0 0 0 3px rgba(139,71,199,0.35)'
+    : '0 4px 16px rgba(0,0,0,0.4)';
+
+  // Show a subset of tags as key/value metadata rows
+  const metaRows = entity.tags
+    .filter((t) => t.value)
+    .slice(0, 2);
 
   return (
     <div
@@ -86,108 +110,161 @@ export const EntityNodeCard: React.FC<EntityNodeCardProps> = ({
         position: 'absolute',
         left: entity.x,
         top: entity.y,
-        width: ENTITY_NODE_WIDTH,
-        height: ENTITY_NODE_HEIGHT,
-        cursor: mode === 'select' ? 'grab' : 'crosshair',
+        minWidth: ENTITY_NODE_WIDTH,
+        cursor: mode === 'connect' ? 'crosshair' : 'grab',
         userSelect: 'none',
-        zIndex: isSelected || isEdgeSource ? 10 : 5,
+        zIndex: isActive ? 10 : 5,
       }}
       onMouseDown={handleMouseDown}
       onClick={handleClick}
     >
       <div
         style={{
-          background: bgColor,
-          border: `2px solid ${borderColor}`,
-          borderRadius: 8,
-          padding: '8px 12px',
-          height: '100%',
-          boxSizing: 'border-box',
-          boxShadow: isSelected ? BoxShadows.Surface.Raised.Hover : BoxShadows.Surface.Raised.Rest,
-          transition: 'border-color 0.15s, box-shadow 0.15s',
+          background: 'var(--bg-1)',
+          border: `1.5px solid ${borderColor}`,
+          borderRadius: 10,
+          padding: '14px 16px 12px 19px',
+          boxShadow,
           position: 'relative',
-          overflow: 'hidden',
+          transition: 'border-color 0.15s, box-shadow 0.15s',
         }}
       >
-        {/* Remove button */}
-        <RemoveButton onClick={(e) => { e.stopPropagation(); onRemove(entity.entityId); }} />
+        {/* Left accent rail */}
+        <span style={{
+          position: 'absolute',
+          left: 0,
+          top: 14,
+          bottom: 14,
+          width: 3,
+          background: accent,
+          borderRadius: '0 2px 2px 0',
+        }} />
 
-        <Text style={{ fontWeight: 600, fontSize: 13, display: 'block', paddingRight: 20,
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {entity.displayName}
-        </Text>
-        <EntityTypeChip type={entity.type} />
+        {/* Head row: name + remove button */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{
+              fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+              fontSize: 13,
+              fontWeight: 600,
+              color: 'var(--fg)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}>
+              {entity.displayName}
+            </div>
+            {/* Outlined type pill */}
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              fontSize: 9,
+              padding: '2px 7px',
+              borderRadius: 999,
+              background: 'transparent',
+              border: `1px solid ${accent}60`,
+              color: accent,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              fontWeight: 600,
+              marginTop: 4,
+              whiteSpace: 'nowrap',
+            }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: accent, display: 'inline-block' }} />
+              {entity.type.replace(/_/g, ' ')}
+            </span>
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); onRemove(entity.entityId); }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--fg-mute)',
+              cursor: 'pointer',
+              fontSize: 16,
+              padding: '0 0 0 4px',
+              lineHeight: 1,
+              flexShrink: 0,
+            }}
+            title="Remove from canvas"
+          >
+            ×
+          </button>
+        </div>
 
-        {entity.tags.length > 0 && (
-          <Flex flexWrap="wrap" gap={2} style={{ marginTop: 4 }}>
-            {entity.tags.slice(0, 3).map((tag) => (
-              <span
-                key={`${tag.context}:${tag.key}:${tag.value ?? ''}`}
-                style={{
-                  fontSize: 11, padding: '1px 5px', borderRadius: 10,
-                  background: Colors.Background.Surface.Backdrop,
-                  color: Colors.Text.Neutral.Default, maxWidth: 80,
-                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                }}
-              >
-                {tag.value ? `${tag.key}:${tag.value}` : tag.key}
-              </span>
-            ))}
-            {entity.tags.length > 3 && (
-              <span style={{ fontSize: 11, color: Colors.Text.Neutral.Subdued }}>
-                +{entity.tags.length - 3}
-              </span>
-            )}
-          </Flex>
+        {/* Metadata rows (tags as key/value) */}
+        {metaRows.map((tag) => (
+          <div
+            key={`${tag.context}:${tag.key}`}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+              fontSize: 10,
+              marginTop: 6,
+              fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+              gap: 8,
+            }}
+          >
+            <span style={{ color: 'var(--fg-3)', flexShrink: 0 }}>{tag.key}</span>
+            <span style={{
+              color: 'var(--fg-2)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}>
+              {tag.value}
+            </span>
+          </div>
+        ))}
+        {entity.tags.length > 2 && (
+          <div style={{ fontSize: 10, color: 'var(--fg-mute)', marginTop: 4, fontFamily: "'IBM Plex Mono', monospace" }}>
+            +{entity.tags.length - 2} more
+          </div>
+        )}
+
+        {/* Connection handles — visible in Connect mode */}
+        {mode === 'connect' && (
+          <>
+            <span
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); onHandleMouseDown?.(entity.entityId, 'left'); }}
+              style={{
+                position: 'absolute',
+                width: 14,
+                height: 14,
+                borderRadius: '50%',
+                background: 'var(--bg)',
+                border: '2px solid var(--dt-purple)',
+                left: -7,
+                top: 'calc(50% - 7px)',
+                pointerEvents: 'auto',
+                cursor: 'crosshair',
+                zIndex: 20,
+              }}
+            />
+            <span
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); onHandleMouseDown?.(entity.entityId, 'right'); }}
+              style={{
+                position: 'absolute',
+                width: 14,
+                height: 14,
+                borderRadius: '50%',
+                background: 'var(--bg)',
+                border: '2px solid var(--dt-purple)',
+                right: -7,
+                top: 'calc(50% - 7px)',
+                pointerEvents: 'auto',
+                cursor: 'crosshair',
+                zIndex: 20,
+              }}
+            />
+          </>
         )}
       </div>
     </div>
   );
 };
 
-const TYPE_COLORS: Record<string, string> = {
-  SERVICE: Colors.Charts.Categorical.Color01.Default,
-  HOST: Colors.Charts.Categorical.Color02.Default,
-  PROCESS_GROUP: Colors.Charts.Categorical.Color03.Default,
-  APPLICATION: Colors.Charts.Categorical.Color04.Default,
-  CUSTOM_DEVICE: Colors.Charts.Categorical.Color05.Default,
-};
-
-const RemoveButton: React.FC<{ onClick: (e: React.MouseEvent) => void }> = ({ onClick }) => {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <div
-      style={{
-        position: 'absolute', top: 4, right: 4,
-        width: 18, height: 18, borderRadius: '50%',
-        background: hovered ? Colors.Background.Container.Critical.Default : Colors.Background.Surface.Backdrop,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        cursor: 'pointer', fontSize: 12,
-        color: hovered ? Colors.Text.Critical.Default : Colors.Text.Neutral.Default,
-        lineHeight: 1,
-        transition: 'all 0.15s',
-      }}
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      title="Remove from canvas"
-    >
-      ×
-    </div>
-  );
-};
-
-const EntityTypeChip: React.FC<{ type: string }> = ({ type }) => {
-  const color = TYPE_COLORS[type] ?? Colors.Text.Neutral.Subdued;
-  const label = type.replace(/_/g, ' ');
-  return (
-    <span style={{
-      display: 'inline-block', fontSize: 10, padding: '1px 6px',
-      borderRadius: 10, background: color,
-      color: Colors.Text.Neutral.OnAccent.Default,
-      marginTop: 3, fontWeight: 500,
-    }}>
-      {label}
-    </span>
-  );
-};
